@@ -6,7 +6,11 @@ TARGET = RayTracer
 TEMPLATE = app
 
 QMAKE_CXXFLAGS += -Wall
+CONFIG += c++14
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    ray_tracer.cpp
 
-HEADERS  +=
+HEADERS  += \
+    geometry.h \
+    ray_tracer.h
