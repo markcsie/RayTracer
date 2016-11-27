@@ -25,7 +25,7 @@ struct Triangle
     QVector3D unit_normal = QVector3D::crossProduct(vertices[1].position_ - vertices[0].position_, vertices[2].position_ - vertices[0].position_).normalized();
     float d = -QVector3D::dotProduct(vertices[0].position_, unit_normal);
     float nd = QVector3D::dotProduct(unit_normal, unit_ray_direction);
-    if (std::abs(nd) < EPISILON) { // parallel to the plane
+    if (nd == 0) { // parallel to the plane
       return false;
     }
     else
@@ -65,12 +65,9 @@ struct Triangle
 
   float area() const
   {
-    float a = (vertices[0].position_ - vertices[1].position_).length();
-    float b = (vertices[1].position_ - vertices[2].position_).length();
-    float c = (vertices[2].position_ - vertices[0].position_).length();
-    float s = (a + b + c) / 2;
-
-    return std::sqrt(s * (s - a) * (s - b) * (s - c));
+    float area = QVector3D::crossProduct(vertices[1].position_ - vertices[0].position_, vertices[2].position_ - vertices[0].position_).length() / 2;
+    assert(area >= 0);
+    return area;
   }
 };
 

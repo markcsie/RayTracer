@@ -203,7 +203,7 @@ QVector3D RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_dir
           QVector3D ks = spheres_[intersection_index].color_specular_;
           float sh = spheres_[intersection_index].shininess_;
 
-          QVector3D local_value = lights_[i].color_ * (kd * (ln) + ks * std::pow(rv, sh));
+          QVector3D local_value = lights_[i].color_ * (kd * ln + ks * std::pow(rv, sh));
           if (ray_depth < MAX_RAY_DEPTH)
           {
             QVector3D reflected_value = trace(intersection_point, unit_r, ray_depth + 1);
@@ -248,7 +248,7 @@ QVector3D RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_dir
           QVector3D ks = alpha * triangles_[intersection_index].vertices[0].color_specular_ + beta * triangles_[intersection_index].vertices[1].color_specular_ + gamma * triangles_[intersection_index].vertices[2].color_specular_;
           float sh = alpha * triangles_[intersection_index].vertices[0].shininess_ + beta * triangles_[intersection_index].vertices[1].shininess_ + gamma * triangles_[intersection_index].vertices[2].shininess_;
 
-          QVector3D local_value = lights_[i].color_ * (kd * (ln) + ks * std::pow(rv, sh));
+          QVector3D local_value = lights_[i].color_ * (kd * ln + ks * std::pow(rv, sh));
           if (ray_depth < MAX_RAY_DEPTH)
           {
             QVector3D reflected_value = trace(intersection_point, unit_r, ray_depth + 1);
@@ -289,14 +289,15 @@ void RayTracer::drawImage()
       // compute view ray direction
       float xx = -ASPECT_RATIO * std::tan(FOV_RADIAN / 2) + (x + 0.5) * X_UNIT;
       float yy = std::tan(FOV_RADIAN / 2) + (y + 0.5) * Y_UNIT;
-
       // TODO: super sampling
-      QVector3D center_value = trace(CAMERA_POS, {xx, yy, -1}, 1);
+      QVector3D final_value = superSampling(xx, yy, 1);
+//      std::cout << "final_value " << final_value[0] << " " << final_value[1] << " " << final_value[2] << " "<< std::endl;
+      assert(!std::isnan(final_value[0]) && !std::isnan(final_value[1]) && !std::isnan(final_value[2]));
 
       QColor color;
-      color.setRedF(std::min(center_value[0], 1.0f));
-      color.setGreenF(std::min(center_value[1], 1.0f));
-      color.setBlueF(std::min(center_value[2], 1.0f));
+      color.setRedF(std::min(final_value[0], 1.0f));
+      color.setGreenF(std::min(final_value[1], 1.0f));
+      color.setBlueF(std::min(final_value[2], 1.0f));
 
       qPainter.setPen(color);
       qPainter.drawPoint(x, y);
@@ -309,4 +310,28 @@ void RayTracer::drawImage()
     }
   }
   qPainter.end();
+}
+
+QVector3D RayTracer::superSampling(const float &center_xx, const float &center_yy, const size_t &depth)
+{
+  float left_xx = center_xx - 0.5 * X_UNIT / depth;
+  float right_xx = center_xx + 0.5 * X_UNIT / depth;
+  float top_yy = center_yy - 0.5 * Y_UNIT / depth;
+  float bottom_yy = center_yy + 0.5 * Y_UNIT / depth;
+
+  if (depth < MAX_SAMPLE_DEPTH)
+  {
+    QVector3D left_top_value = superSampling((left_xx + center_xx) / 2, (top_yy + center_yy) / 2, depth + 1);
+    QVector3D right_top_value = superSampling((right_xx + center_xx) / 2, (top_yy + center_yy) / 2, depth + 1);
+    QVector3D left_bottom_value = superSampling((left_xx + center_xx) / 2, (bottom_yy + center_yy) / 2, depth + 1);
+    QVector3D right_bottom_value = superSampling((right_xx + center_xx) / 2, (bottom_yy + center_yy) / 2, depth + 1);
+    return (left_top_value + right_top_value + left_bottom_value + right_bottom_value) / 4;
+  }
+  else
+  {
+    QVector3D center_value = trace(CAMERA_POS, {center_xx, center_yy, -1}, 1);
+    //std::cout << "center_value " << center_value[0] << " " << center_value[1] << " " << center_value[2] << " "<< std::endl;
+    return center_value;
+  }
+
 }

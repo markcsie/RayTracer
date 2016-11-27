@@ -39,8 +39,9 @@ private:
   constexpr static float X_UNIT = (2 * ASPECT_RATIO * std::tan(FOV_RADIAN / 2)) / WIDTH;
   constexpr static float Y_UNIT = (-2 * std::tan(FOV_RADIAN / 2)) / HEIGHT;
 
+  const static size_t MAX_SAMPLE_DEPTH = 1;
   // Recursive
-  const static size_t MAX_RAY_DEPTH = 3;
+  const static size_t MAX_RAY_DEPTH = 1;
 
   std::ifstream scene_file_;
   QImage image_;
@@ -55,6 +56,7 @@ private:
   void parseRad(float &r);
   void parseShi(float &shi);
 
+  QVector3D superSampling(const float &center_xx, const float &center_yy, const size_t &depth);
   QVector3D trace(const QVector3D &ray_origin, const QVector3D &ray_direction, const size_t &ray_depth);
   float intersect(const QVector3D &ray_origin, const QVector3D &unit_ray_direction, ObjectType &object_type, size_t &intersection_index);
 
