@@ -131,7 +131,7 @@ float RayTracer::intersect(const QVector3D &ray_origin, const QVector3D &unit_ra
 {
 //  std::cout << "unit_ray_direction " << unit_ray_direction.length() << std::endl;
   object_type = sphere;
-  intersection_index = -1;
+  intersection_index = std::numeric_limits<size_t>::max();
   float min_t_near = std::numeric_limits<float>::max();
   for (size_t i = 0; i < spheres_.size(); i++) {
     float t = 0;
@@ -161,7 +161,7 @@ float RayTracer::intersect(const QVector3D &ray_origin, const QVector3D &unit_ra
   return min_t_near;
 }
 
-QColor RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_direction)
+QVector3D RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_direction, const size_t &ray_depth)
 {
   // normalize the direction vector
   QVector3D unit_ray_direction = ray_direction.normalized();
@@ -172,7 +172,7 @@ QColor RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_direct
   assert(t >= 0);
 
   // The ray hits
-  if (intersection_index != -1) {
+  if (intersection_index != std::numeric_limits<size_t>::max()) {
 //    std::cout << "object_type " << object_type << std::endl;
 //    std::cout << "intersection_index " << intersection_index << std::endl;
     const QVector3D intersection_point = ray_origin + t * unit_ray_direction;
@@ -190,7 +190,7 @@ QColor RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_direct
       float t = intersect(intersection_point, unit_l, dummy_object_type, shadow_intersection_index); // TODO: optimize?
 //      std::cout << "t " << t << std::endl;
       // shadow ray is not blocked, either there's no intersection, or the object is further from the light source
-      if (shadow_intersection_index == -1 || t > light_t)
+      if (shadow_intersection_index == std::numeric_limits<size_t>::max() || t > light_t)
       {
         if (object_type == sphere)
         {
@@ -203,9 +203,16 @@ QColor RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_direct
           QVector3D ks = spheres_[intersection_index].color_specular_;
           float sh = spheres_[intersection_index].shininess_;
 
-          // TODO: attenuation
-          float attenuation = 1.0;
-          illumination_value += attenuation * lights_[i].color_ * (kd * (ln) + ks * std::pow(rv, sh));
+          QVector3D local_value = lights_[i].color_ * (kd * (ln) + ks * std::pow(rv, sh));
+          if (ray_depth < MAX_RAY_DEPTH)
+          {
+            QVector3D reflected_value = trace(intersection_point, unit_r, ray_depth + 1);
+            illumination_value += (QVector3D(1.0f, 1.0f, 1.0f) - ks) * local_value + ks * reflected_value;
+          }
+          else
+          {
+            illumination_value += local_value;
+          }
 //          std::cout << "illumination_value " << illumination_value[0] << " " << illumination_value[1] << " " << illumination_value[2] << std::endl;
         }
         else if (object_type == triangle)
@@ -241,23 +248,25 @@ QColor RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_direct
           QVector3D ks = alpha * triangles_[intersection_index].vertices[0].color_specular_ + beta * triangles_[intersection_index].vertices[1].color_specular_ + gamma * triangles_[intersection_index].vertices[2].color_specular_;
           float sh = alpha * triangles_[intersection_index].vertices[0].shininess_ + beta * triangles_[intersection_index].vertices[1].shininess_ + gamma * triangles_[intersection_index].vertices[2].shininess_;
 
-          // TODO: attenuation
-          illumination_value += lights_[i].color_ * (kd * (ln) + ks * std::pow(rv, sh));
+          QVector3D local_value = lights_[i].color_ * (kd * (ln) + ks * std::pow(rv, sh));
+          if (ray_depth < MAX_RAY_DEPTH)
+          {
+            QVector3D reflected_value = trace(intersection_point, unit_r, ray_depth + 1);
+            illumination_value += (QVector3D(1.0f, 1.0f, 1.0f) - ks) * local_value + ks * reflected_value;
+          }
+          else
+          {
+            illumination_value += local_value;
+          }
         }
       }
     }
     illumination_value += ambient_light_;
-//    std::cout << "illumination_value " << illumination_value[0] << " " << illumination_value[1] << " " << illumination_value[2] << std::endl;
-    QColor final_color;
-    final_color.setRedF(std::min(illumination_value[0], 1.0f));
-    final_color.setGreenF(std::min(illumination_value[1], 1.0f));
-    final_color.setBlueF(std::min(illumination_value[2], 1.0f));
-//    std::cout << "final_color " << final_color.red() << " " << final_color.green() << " " << final_color.blue() << std::endl;
-    return final_color;
+    return illumination_value;
   }
 
   // background color
-  return QColor(255, 255, 255);
+  return QVector3D(1.0f, 1.0f, 1.0f);
 }
 
 void RayTracer::drawImage()
@@ -274,14 +283,22 @@ void RayTracer::drawImage()
   // |
   // y
   std::cout << "progress: " << std::endl;
-  size_t current_progress = -1;
+  size_t current_progress = std::numeric_limits<size_t>::max();
   for (size_t x = 0; x < WIDTH; x++) {
     for (size_t y = 0; y < HEIGHT; y++) {
       // compute view ray direction
       float xx = -ASPECT_RATIO * std::tan(FOV_RADIAN / 2) + (x + 0.5) * X_UNIT;
       float yy = std::tan(FOV_RADIAN / 2) + (y + 0.5) * Y_UNIT;
 
-      qPainter.setPen(trace(CAMERA_POS, {xx, yy, -1}));
+      // TODO: super sampling
+      QVector3D center_value = trace(CAMERA_POS, {xx, yy, -1}, 1);
+
+      QColor color;
+      color.setRedF(std::min(center_value[0], 1.0f));
+      color.setGreenF(std::min(center_value[1], 1.0f));
+      color.setBlueF(std::min(center_value[2], 1.0f));
+
+      qPainter.setPen(color);
       qPainter.drawPoint(x, y);
     }
     unsigned int progress = std::ceil((x / static_cast<float>(WIDTH)) * 100);
