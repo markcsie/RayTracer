@@ -267,14 +267,14 @@ QVector3D RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_dir
   }
 
   // background color
-//  if (ray_depth > 1) // this is a reflected ray and it does not hit any objects
-//  {
-//    return QVector3D(0.0f, 0.0f, 0.0f);
-//  }
-//  else
-//  {
+  if (ray_depth > 1) // this is a reflected ray and it does not hit any objects
+  {
+    return QVector3D(0.0f, 0.0f, 0.0f);
+  }
+  else
+  {
     return QVector3D(1.0f, 1.0f, 1.0f);
-//  }
+  }
 }
 
 void RayTracer::drawImage()
