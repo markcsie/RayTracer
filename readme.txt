@@ -2,6 +2,15 @@ Assignment #3: Ray tracing
 
 FULL NAME: Kai-Chieh Ma
 
+Instructions to execute my program:
+My program was developed using Qt with mingw on Windows.
+Please use Windows to execute my program.
+The Cygwin environment and related libraries are included in the zip file.
+Step:
+1. execute "Cygwin.bat" in folder "cygwin64"
+2. "cd .." in the cygwin bash shell
+3. "./RayTracer.exe test2.scene 1 1" (./RayTracer.exe "scene file" "super sampling depth" "Recursive reflection depth")
+
 
 MANDATORY FEATURES
 ------------------
