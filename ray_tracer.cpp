@@ -6,8 +6,9 @@
 
 const QVector3D RayTracer::CAMERA_POS = QVector3D(0.0, 0.0, 0.0);
 
-RayTracer::RayTracer()
-  : scene_file_(nullptr), image_(QSize(WIDTH, HEIGHT), QImage::Format_RGB888)
+RayTracer::RayTracer(const size_t &max_sample_depth, const size_t &max_ray_depth)
+  : scene_file_(nullptr), image_(QSize(WIDTH, HEIGHT), QImage::Format_RGB888),
+    max_sample_depth_(max_sample_depth), max_ray_depth_(max_ray_depth)
 {
 
 }
@@ -204,7 +205,7 @@ QVector3D RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_dir
           float sh = spheres_[intersection_index].shininess_;
 
           QVector3D local_value = lights_[i].color_ * (kd * ln + ks * std::pow(rv, sh));
-          if (ray_depth < MAX_RAY_DEPTH)
+          if (ray_depth < max_ray_depth_)
           {
             QVector3D reflected_value = trace(intersection_point, unit_r, ray_depth + 1);
             illumination_value += (QVector3D(1.0f, 1.0f, 1.0f) - ks) * local_value + ks * reflected_value;
@@ -249,7 +250,7 @@ QVector3D RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_dir
           float sh = alpha * triangles_[intersection_index].vertices[0].shininess_ + beta * triangles_[intersection_index].vertices[1].shininess_ + gamma * triangles_[intersection_index].vertices[2].shininess_;
 
           QVector3D local_value = lights_[i].color_ * (kd * ln + ks * std::pow(rv, sh));
-          if (ray_depth < MAX_RAY_DEPTH)
+          if (ray_depth < max_ray_depth_)
           {
             QVector3D reflected_value = trace(intersection_point, unit_r, ray_depth + 1);
             illumination_value += (QVector3D(1.0f, 1.0f, 1.0f) - ks) * local_value + ks * reflected_value;
@@ -266,7 +267,14 @@ QVector3D RayTracer::trace(const QVector3D &ray_origin, const QVector3D &ray_dir
   }
 
   // background color
-  return QVector3D(1.0f, 1.0f, 1.0f);
+//  if (ray_depth > 1) // this is a reflected ray and it does not hit any objects
+//  {
+//    return QVector3D(0.0f, 0.0f, 0.0f);
+//  }
+//  else
+//  {
+    return QVector3D(1.0f, 1.0f, 1.0f);
+//  }
 }
 
 void RayTracer::drawImage()
@@ -319,7 +327,7 @@ QVector3D RayTracer::superSampling(const float &center_xx, const float &center_y
   float top_yy = center_yy - 0.5 * Y_UNIT / depth;
   float bottom_yy = center_yy + 0.5 * Y_UNIT / depth;
 
-  if (depth < MAX_SAMPLE_DEPTH)
+  if (depth < max_sample_depth_)
   {
     QVector3D left_top_value = superSampling((left_xx + center_xx) / 2, (top_yy + center_yy) / 2, depth + 1);
     QVector3D right_top_value = superSampling((right_xx + center_xx) / 2, (top_yy + center_yy) / 2, depth + 1);

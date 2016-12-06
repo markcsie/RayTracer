@@ -13,7 +13,7 @@
 class RayTracer
 {
 public:
-  RayTracer();
+  RayTracer(const size_t &max_sample_depth = 1, const size_t &max_ray_depth_ = 1);
   RayTracer(const RayTracer& other);
   virtual ~RayTracer();
 
@@ -39,9 +39,9 @@ private:
   constexpr static float X_UNIT = (2 * ASPECT_RATIO * std::tan(FOV_RADIAN / 2)) / WIDTH;
   constexpr static float Y_UNIT = (-2 * std::tan(FOV_RADIAN / 2)) / HEIGHT;
 
-  const static size_t MAX_SAMPLE_DEPTH = 1;
+  size_t max_sample_depth_;
   // Recursive
-  const static size_t MAX_RAY_DEPTH = 1;
+  size_t max_ray_depth_;
 
   std::ifstream scene_file_;
   QImage image_;

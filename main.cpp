@@ -17,8 +17,28 @@
 
 int main(int argc, char *argv[])
 {    
+  if (argc < 2)
+  {
+    std::cerr << "Please specify the scene file" << std::endl;
+    return EXIT_FAILURE;
+  }
   QApplication app(argc, argv);
-  RayTracer ray_tracer;
+
+  size_t max_sample_depth = 1;
+  size_t max_ray_depth = 1;
+  if (argc >= 3)
+  {
+    max_sample_depth = std::max(0, std::stoi(std::string(argv[2])));
+  }
+  if (argc >= 4)
+  {
+    max_ray_depth = std::max(0, std::stoi(std::string(argv[3])));
+  }
+
+  std::cout << "max_sample_depth " << max_sample_depth << std::endl;
+  std::cout << "max_ray_depth " << max_ray_depth << std::endl;
+  RayTracer ray_tracer(max_sample_depth, max_ray_depth);
+//  RayTracer ray_tracer;
   std::string scene_file_name(argv[1]);
   ray_tracer.loadScene(scene_file_name);
 
